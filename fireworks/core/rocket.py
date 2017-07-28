@@ -79,7 +79,7 @@ def background_task(btask, spec, stop_event, master_thread):
     num_launched = 0
     while not stop_event.is_set() and master_thread.isAlive():
         for task in btask.tasks:
-            task.run_task(spec)
+            task.ruu_task(spec)
         if btask.sleep_time > 0:
             stop_event.wait(btask.sleep_time)
         num_launched += 1
@@ -174,11 +174,11 @@ class Rocket:
 
             if m_fw.spec.get('_recover_launch', None):
                 launch_to_recover = lp.get_launch_by_id(m_fw.spec['_recover_launch']['_launch_id'])
-                starting_task = launch_to_recover.action.stored_data.get('_exception', {}).get('_failed_task_n', 0)
-                recovery = launch_to_recover.action.stored_data['_recovery']
-                all_stored_data.update(recovery['_all_stored_data'])
-                all_update_spec.update(recovery['_all_update_spec'])
-                all_mod_spec.extend(recovery['_all_mod_spec'])
+                recovery = launch_to_recover.get(['_recovery'])
+                starting_task = recovery['task_number']
+                all_stored_data.update(recovery['all_stored_data'])
+                all_update_spec.update(recovery['all_update_spec'])
+                all_mod_spec.extend(recovery['all_mod_spec'])
                 recover_launch_dir = launch_to_recover.launch_dir
                 if lp:
                     l_logger.log(
@@ -226,10 +226,18 @@ class Rocket:
                 for bt in my_spec['_background_tasks']:
                     btask_stops.append(start_background_task(bt, m_fw.spec))
 
-            # execute the Firetasks!
+            # Set up recovery
+            all_stored_data, all_update_spec, all_mod_spec = {}, {}, []
+            # execute the FireTasks!
             for t_counter, t in enumerate(m_fw.tasks[starting_task:], start=starting_task):
                 if lp:
-                    l_logger.log(logging.INFO, "Task started: %s." % t.fw_name)
+                    recovery_dict = {'ntask': t_counter,
+                                     'all_stored_data': all_stored_data,
+                                     'all_update_spec': all_update_spec,
+                                     'all_mod_spec': all_mod_spec}
+                    lp.launches.update_one({'launch_id': launch_id, 'state': 'RUNNING'},
+                                           {'$set':{'_recovery': recovery_dict}})
+                    lp.log_message(logging.INFO, "Task started: %s." % t.fw_name)
 
                 if my_spec.get("_add_launchpad_and_fw_id"):
                     t.fw_id = m_fw.fw_id
@@ -268,11 +276,7 @@ class Rocket:
                     m_action = FWAction(stored_data={'_message': 'runtime error during task',
                                                      '_task': m_task,
                                                      '_exception': {'_stacktrace': tb,
-                                                                    '_details': exception_details,
-                                                                    '_failed_task_n': t_counter},
-                                                     '_recovery': {'_all_stored_data': all_stored_data,
-                                                                   '_all_update_spec': all_update_spec,
-                                                                   '_all_mod_spec': all_mod_spec}},
+                                                                    '_details': exception_details}},
                                         exit=True)
                     m_action = self.decorate_fwaction(m_action, my_spec, m_fw, launch_dir)
 
