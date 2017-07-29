@@ -1226,7 +1226,7 @@ class LaunchPad(FWSerializable):
             self.fireworks.find_one_and_replace({'fw_id': fw.fw_id}, fw.to_db_dict(), upsert=True)
         return old_new
 
-    def rerun_fw(self, fw_id, rerun_duplicates=True, recover=False, recover_launch=False, recover_mode=None):
+    def rerun_fw(self, fw_id, rerun_duplicates=True, recover_launch=False, recover_mode=None):
         """
         Rerun the firework corresponding to the given id.
 
@@ -1234,7 +1234,8 @@ class LaunchPad(FWSerializable):
             fw_id (int): firework id
             rerun_duplicates (bool): flag for whether duplicates should be rerun
             recover_launch (int or bool): launch_id for last recovery, if set to
-                True, recovery will find the last available launch
+                True, recovery will find the last available launch.  If it is an
+                int, will recover that specific launch
             recover_mode ('prev_dir' or 'copy'): flag to indicate whether to copy
                 or run recovery fw in previous directory
 
@@ -1289,7 +1290,8 @@ class LaunchPad(FWSerializable):
         for f in duplicates:
             self.m_logger.info("Also rerunning duplicate fw_id: {}".format(f))
             # False for speed, True shouldn't be needed
-            r = self.rerun_fw(f, rerun_duplicates=False, recover_launch=recover_launch)
+            r = self.rerun_fw(f, rerun_duplicates=False, recover_launch=recover_launch,
+                              recover_mode=recover_mode)
             reruns.extend(r)
         
         return reruns

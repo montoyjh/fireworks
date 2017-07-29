@@ -236,7 +236,7 @@ class Rocket:
                                      'all_update_spec': all_update_spec,
                                      'all_mod_spec': all_mod_spec}
                     lp.launches.update_one({'launch_id': launch_id, 'state': 'RUNNING'},
-                                           {'$set':{'_recovery': recovery_dict}})
+                                           {'$set':{'action.stored_data._recovery': recovery_dict}})
                     lp.log_message(logging.INFO, "Task started: %s." % t.fw_name)
 
                 if my_spec.get("_add_launchpad_and_fw_id"):
